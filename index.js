@@ -26,13 +26,46 @@ async function run() {
 
     const usersCollection = client.db("BloodLinkDB").collection("users");
 
-
     // user related api
     app.post("/register", async (req, res) => {
       const userData = req.body;
       const result = await usersCollection.insertOne(userData);
       res.send(result);
     });
+
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      try {
+        const user = await usersCollection.findOne({ email });
+        if (user) {
+          res.send(user);
+        } else {
+          res.status(404).send({ message: "User not found" });
+        }
+      } catch (error) {
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+
+    app.put("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const updatedData = req.body;
+    
+      try {
+        const result = await usersCollection.updateOne(
+          { email },
+          { $set: updatedData }
+        );
+        if (result.matchedCount === 0) {
+          res.status(404).send({ message: "User not found" });
+        } else {
+          res.send({ message: "User updated successfully" });
+        }
+      } catch (error) {
+        res.status(500).send({ message: "Error updating user" });
+      }
+    });
+    
 
     await client.connect();
     // Send a ping to confirm a successful connection
