@@ -25,6 +25,9 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
 
     const usersCollection = client.db("BloodLinkDB").collection("users");
+    const donationRequestsCollection = client
+      .db("BloodLinkDB")
+      .collection("donationRequests");
 
     // user related api
     app.post("/register", async (req, res) => {
@@ -50,7 +53,7 @@ async function run() {
     app.put("/users/:email", async (req, res) => {
       const email = req.params.email;
       const updatedData = req.body;
-    
+
       try {
         const result = await usersCollection.updateOne(
           { email },
@@ -65,7 +68,28 @@ async function run() {
         res.status(500).send({ message: "Error updating user" });
       }
     });
-    
+
+    // POST API to create a new donation request
+    app.post("/donation-requests", async (req, res) => {
+      const donationRequest = req.body;
+
+      try {
+        const result = await donationRequestsCollection.insertOne(
+          donationRequest
+        );
+        res.send({
+          success: true,
+          message: "Donation request created successfully!",
+          result,
+        });
+      } catch (error) {
+        console.error("Error inserting donation request:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to create donation request. Please try again.",
+        });
+      }
+    });
 
     await client.connect();
     // Send a ping to confirm a successful connection
