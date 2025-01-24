@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -87,6 +87,151 @@ async function run() {
         res.status(500).send({
           success: false,
           message: "Failed to create donation request. Please try again.",
+        });
+      }
+    });
+
+    // get api to get the donation request of an user
+    app.get("/donation-requests/:email", async (req, res) => {
+      const email = req.params.email;
+
+      try {
+        const donationRequests = await donationRequestsCollection
+          .find({ requesterEmail: email })
+          .toArray();
+
+        if (donationRequests.length === 0) {
+          res.status(404).send({
+            success: false,
+            message: "No donation requests found for this user.",
+          });
+        } else {
+          res.send(donationRequests);
+        }
+      } catch (error) {
+        console.error("Error retrieving donation requests:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to fetch donation requests. Please try again later.",
+        });
+      }
+    });
+
+    // Backend Code Enhancements
+    app.get("/donation-request/:id", async (req, res) => {
+      const id = req.params.id;
+
+      try {
+        const donationRequest = await donationRequestsCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (donationRequest) {
+          res.send(donationRequest);
+        } else {
+          res
+            .status(404)
+            .send({ success: false, message: "Donation request not found" });
+        }
+      } catch (error) {
+        console.error("Error retrieving donation request:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to retrieve donation request",
+        });
+      }
+    });
+
+    app.put("/donation-requests/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedData = req.body; // This should not contain _id
+
+      try {
+        const objectId = new ObjectId(id); // Convert 'id' to ObjectId
+
+        const result = await donationRequestsCollection.updateOne(
+          { _id: objectId }, // Match the document by _id
+          { $set: updatedData } // Update only the fields in updatedData
+        );
+
+        if (result.matchedCount === 0) {
+          res.status(404).send({
+            success: false,
+            message: "Donation request not found",
+          });
+        } else {
+          res.send({
+            success: true,
+            message: "Donation request updated successfully",
+          });
+        }
+      } catch (error) {
+        console.error("Error updating donation request:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to update donation request",
+        });
+      }
+    });
+
+    app.delete("/donation-requests/:id", async (req, res) => {
+      const id = req.params.id;
+
+      try {
+        const result = await donationRequestsCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        if (result.deletedCount === 0) {
+          res
+            .status(404)
+            .send({ success: false, message: "Donation request not found" });
+        } else {
+          res.send({
+            success: true,
+            message: "Donation request deleted successfully",
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting donation request:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to delete donation request",
+        });
+      }
+    });
+
+    app.patch("/donation-requests/:id/status", async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+
+      if (!["inprogress", "done", "canceled"].includes(status)) {
+        return res
+          .status(400)
+          .send({ success: false, message: "Invalid status value" });
+      }
+
+      try {
+        const result = await donationRequestsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { donationStatus: status } }
+        );
+
+        if (result.matchedCount === 0) {
+          res
+            .status(404)
+            .send({ success: false, message: "Donation request not found" });
+        } else {
+          res.send({
+            success: true,
+            message: "Donation request status updated successfully",
+          });
+        }
+      } catch (error) {
+        console.error("Error updating donation status:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to update donation status",
         });
       }
     });
