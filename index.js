@@ -95,18 +95,16 @@ async function run() {
     app.get("/donation-requests/:email", async (req, res) => {
       const { email } = req.params;
       const { page = 1, limit = 5, filter } = req.query;
-    
+
       const pageNumber = parseInt(page, 10);
       const limitNumber = parseInt(limit, 10);
-    
+
       // Construct query
       const query = { requesterEmail: email };
       if (filter && filter !== "all") {
-        query.donationStatus = filter.toLowerCase(); // Normalize filter to lowercase
+        query.donationStatus = filter.toLowerCase();
       }
-    
-      console.log("Constructed Query:", query); // Debugging
-    
+
       try {
         // Fetch filtered and paginated requests
         const donationRequests = await donationRequestsCollection
@@ -114,10 +112,12 @@ async function run() {
           .skip((pageNumber - 1) * limitNumber)
           .limit(limitNumber)
           .toArray();
-    
+
         // Count total matching requests
-        const totalRequests = await donationRequestsCollection.countDocuments(query);
-    
+        const totalRequests = await donationRequestsCollection.countDocuments(
+          query
+        );
+
         res.send({
           success: true,
           totalRequests,
@@ -133,7 +133,34 @@ async function run() {
         });
       }
     });
-    
+
+    // Get all donation requests with 'pending' status
+    app.get("/donation-requests-pending", async (req, res) => {
+      try {
+        // Fetch all pending donation requests
+        const pendingRequests = await donationRequestsCollection
+          .find({ donationStatus: "pending" })
+          .toArray(); // Convert cursor to array
+
+        if (pendingRequests.length === 0) {
+          return res
+            .status(404)
+            .send({ success: false, message: "No pending requests found" });
+        }
+
+        res.send({
+          success: true,
+          requests: pendingRequests,
+        });
+      } catch (error) {
+        console.error("Error fetching pending donation requests:", error);
+        res.status(500).send({
+          success: false,
+          message:
+            "Failed to fetch pending donation requests. Please try again later.",
+        });
+      }
+    });
 
     // Backend Code Enhancements
     app.get("/donation-request/:id", async (req, res) => {
@@ -162,14 +189,14 @@ async function run() {
 
     app.put("/donation-requests/:id", async (req, res) => {
       const id = req.params.id;
-      const updatedData = req.body; // This should not contain _id
+      const updatedData = req.body;
 
       try {
-        const objectId = new ObjectId(id); // Convert 'id' to ObjectId
+        const objectId = new ObjectId(id);
 
         const result = await donationRequestsCollection.updateOne(
-          { _id: objectId }, // Match the document by _id
-          { $set: updatedData } // Update only the fields in updatedData
+          { _id: objectId },
+          { $set: updatedData }
         );
 
         if (result.matchedCount === 0) {
