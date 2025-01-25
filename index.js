@@ -69,6 +69,38 @@ async function run() {
       }
     });
 
+    // GET API to fetch all donors
+    app.get("/donors", async (req, res) => {
+      try {
+        const { bloodGroup, district, upazila } = req.query;
+
+        const query = { role: "donor" };
+        if (bloodGroup) query.bloodGroup = bloodGroup;
+        if (district) query.district = district;
+        if (upazila) query.upazila = upazila;
+
+        const donors = await usersCollection.find(query).toArray();
+
+        if (donors.length > 0) {
+          res.status(200).send({
+            success: true,
+            donors,
+          });
+        } else {
+          res.status(404).send({
+            success: false,
+            message: "No donors found matching the criteria",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching donors:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to fetch donors. Please try again later.",
+        });
+      }
+    });
+
     // POST API to create a new donation request
     app.post("/donation-requests", async (req, res) => {
       const donationRequest = req.body;
