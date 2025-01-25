@@ -93,21 +93,38 @@ async function run() {
 
     // get api to get the donation request of an user
     app.get("/donation-requests/:email", async (req, res) => {
-      const email = req.params.email;
-
+      const { email } = req.params;
+      const { page = 1, limit = 5, filter } = req.query;
+    
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10);
+    
+      // Construct query
+      const query = { requesterEmail: email };
+      if (filter && filter !== "all") {
+        query.donationStatus = filter.toLowerCase(); // Normalize filter to lowercase
+      }
+    
+      console.log("Constructed Query:", query); // Debugging
+    
       try {
+        // Fetch filtered and paginated requests
         const donationRequests = await donationRequestsCollection
-          .find({ requesterEmail: email })
+          .find(query)
+          .skip((pageNumber - 1) * limitNumber)
+          .limit(limitNumber)
           .toArray();
-
-        if (donationRequests.length === 0) {
-          res.status(404).send({
-            success: false,
-            message: "No donation requests found for this user.",
-          });
-        } else {
-          res.send(donationRequests);
-        }
+    
+        // Count total matching requests
+        const totalRequests = await donationRequestsCollection.countDocuments(query);
+    
+        res.send({
+          success: true,
+          totalRequests,
+          totalPages: Math.ceil(totalRequests / limitNumber),
+          currentPage: pageNumber,
+          requests: donationRequests,
+        });
       } catch (error) {
         console.error("Error retrieving donation requests:", error);
         res.status(500).send({
@@ -116,6 +133,7 @@ async function run() {
         });
       }
     });
+    
 
     // Backend Code Enhancements
     app.get("/donation-request/:id", async (req, res) => {
