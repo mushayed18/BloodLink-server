@@ -101,47 +101,47 @@ async function run() {
       }
     });
 
-    //-------------------------------------------
     // Endpoint to Get All Users with Pagination and filters
     app.get("/users", async (req, res) => {
       const { page = 1, limit = 6, status } = req.query;
       const filter = status ? { status } : {};
       const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
       const users = await usersCollection
         .find(filter)
         .skip(skip)
         .limit(parseInt(limit))
         .toArray();
-      
+
       const totalUsers = await usersCollection.countDocuments(filter);
-    
+
       res.send({ users, total: totalUsers });
     });
-    
 
-    // Update User Role or Status
-    app.put("/users/:id", async (req, res) => {
+    app.put("/user/:id", async (req, res) => {
       const { id } = req.params;
+    
       const { role, status } = req.body;
       const updateFields = {};
       if (role) updateFields.role = role;
       if (status) updateFields.status = status;
     
-      const result = await usersCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: updateFields }
-      );
+      try {
+        const result = await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateFields }
+        );
     
-      if (result.matchedCount > 0) {
-        res.send({ success: true, message: "User updated successfully" });
-      } else {
-        res.status(404).send({ success: false, message: "User not found" });
+        if (result.matchedCount > 0) {
+          res.send({ success: true, message: "User updated successfully" });
+        } else {
+          res.status(404).send({ success: false, message: "Userssssssss not found" });
+        }
+      } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).send({ success: false, message: "Internal Server Error" });
       }
     });
-    
-    // ---------------------------------------------------
-
     
 
     // POST API to create a new donation request
@@ -374,5 +374,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Coffee Server is running on port: ${port}`);
+  console.log(`BloodLink Server is running on port: ${port}`);
 });
