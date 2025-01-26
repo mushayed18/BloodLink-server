@@ -120,29 +120,32 @@ async function run() {
 
     app.put("/user/:id", async (req, res) => {
       const { id } = req.params;
-    
+
       const { role, status } = req.body;
       const updateFields = {};
       if (role) updateFields.role = role;
       if (status) updateFields.status = status;
-    
+
       try {
         const result = await usersCollection.updateOne(
           { _id: new ObjectId(id) },
           { $set: updateFields }
         );
-    
+
         if (result.matchedCount > 0) {
           res.send({ success: true, message: "User updated successfully" });
         } else {
-          res.status(404).send({ success: false, message: "Userssssssss not found" });
+          res
+            .status(404)
+            .send({ success: false, message: "Userssssssss not found" });
         }
       } catch (error) {
         console.error("Error updating user:", error);
-        res.status(500).send({ success: false, message: "Internal Server Error" });
+        res
+          .status(500)
+          .send({ success: false, message: "Internal Server Error" });
       }
     });
-    
 
     // POST API to create a new donation request
     app.post("/donation-requests", async (req, res) => {
@@ -209,13 +212,55 @@ async function run() {
       }
     });
 
+    // Get all donation requests with pagination and filter functionality
+    app.get("/all-donation-requests", async (req, res) => {
+      const { page = 1, limit = 5, filter } = req.query;
+
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10);
+
+      // Construct query for filter
+      const query = {};
+      if (filter && filter !== "all") {
+        query.donationStatus = filter.toLowerCase();
+      }
+
+      try {
+        // Fetch filtered and paginated requests
+        const donationRequests = await donationRequestsCollection
+          .find(query)
+          .skip((pageNumber - 1) * limitNumber)
+          .limit(limitNumber)
+          .toArray();
+
+        // Count total matching requests
+        const totalRequests = await donationRequestsCollection.countDocuments(
+          query
+        );
+
+        res.send({
+          success: true,
+          totalRequests,
+          totalPages: Math.ceil(totalRequests / limitNumber),
+          currentPage: pageNumber,
+          requests: donationRequests,
+        });
+      } catch (error) {
+        console.error("Error retrieving donation requests:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to fetch donation requests. Please try again later.",
+        });
+      }
+    });
+
     // Get all donation requests with 'pending' status
     app.get("/donation-requests-pending", async (req, res) => {
       try {
         // Fetch all pending donation requests
         const pendingRequests = await donationRequestsCollection
           .find({ donationStatus: "pending" })
-          .toArray(); // Convert cursor to array
+          .toArray();
 
         if (pendingRequests.length === 0) {
           return res
