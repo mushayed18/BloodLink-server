@@ -442,7 +442,7 @@ async function run() {
 
     // Get all blogs API (with pagination and filtering)
     app.get("/blogs", async (req, res) => {
-      const { page = 1, limit = 5, status } = req.query;
+      const { page = 1, limit = 6, status } = req.query;
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const filter = status ? { status } : {};
 
@@ -517,7 +517,7 @@ async function run() {
     // PUT API to change blog status
     app.put("/blog-status/:id", async (req, res) => {
       const { id } = req.params;
-      const { status } = req.body; 
+      const { status } = req.body;
 
       if (!["published", "draft"].includes(status)) {
         return res
@@ -546,6 +546,37 @@ async function run() {
         res.status(500).send({
           success: false,
           message: "Failed to update blog status. Please try again later.",
+        });
+      }
+    });
+
+    // Get only published blogs
+    app.get("/published-blogs", async (req, res) => {
+      const { page = 1, limit = 6 } = req.query;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const filter = { status: "published" };
+
+      try {
+        const blogs = await blogsCollection
+          .find(filter)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .toArray();
+
+        const totalBlogs = await blogsCollection.countDocuments(filter);
+
+        res.send({
+          success: true,
+          totalBlogs,
+          totalPages: Math.ceil(totalBlogs / limit),
+          currentPage: page,
+          blogs,
+        });
+      } catch (error) {
+        console.error("Error fetching published blogs:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to fetch published blogs. Please try again later.",
         });
       }
     });
