@@ -401,6 +401,158 @@ async function run() {
       }
     });
 
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    const blogsCollection = client.db("BloodLinkDB").collection("blogs");
+
+    // POST API to create a new blog
+    app.post("/blogs", async (req, res) => {
+      const { title, content, thumbnail, status } = req.body;
+
+      if (!title || !content || !thumbnail) {
+        return res
+          .status(400)
+          .send({ success: false, message: "All fields are required" });
+      }
+
+      const newBlog = {
+        title,
+        content,
+        thumbnail,
+        status: status || "draft",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      try {
+        const result = await blogsCollection.insertOne(newBlog);
+        res.status(201).send({
+          success: true,
+          message: "Blog created successfully!",
+          blog: { ...newBlog, _id: result.insertedId },
+        });
+      } catch (error) {
+        console.error("Error creating blog:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to create the blog. Please try again later.",
+        });
+      }
+    });
+
+    // Get all blogs API (with pagination and filtering)
+    app.get("/blogs", async (req, res) => {
+      const { page = 1, limit = 5, status } = req.query;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const filter = status ? { status } : {};
+
+      try {
+        const blogs = await blogsCollection
+          .find(filter)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .toArray();
+
+        const totalBlogs = await blogsCollection.countDocuments(filter);
+
+        res.send({
+          success: true,
+          totalBlogs,
+          totalPages: Math.ceil(totalBlogs / limit),
+          currentPage: page,
+          blogs,
+        });
+      } catch (error) {
+        console.error("Error fetching blogs:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to fetch blogs. Please try again later.",
+        });
+      }
+    });
+
+    // Get a specific blog by ID
+    app.get("/blogs/:id", async (req, res) => {
+      const { id } = req.params;
+
+      try {
+        const blog = await blogsCollection.findOne({ _id: new ObjectId(id) });
+        if (blog) {
+          res.send({ success: true, blog });
+        } else {
+          res.status(404).send({ success: false, message: "Blog not found" });
+        }
+      } catch (error) {
+        console.error("Error retrieving blog:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to retrieve blog. Please try again later.",
+        });
+      }
+    });
+
+    // DELETE API to delete a blog
+    app.delete("/blogs/:id", async (req, res) => {
+      const { id } = req.params;
+
+      try {
+        const result = await blogsCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        if (result.deletedCount === 0) {
+          res.status(404).send({ success: false, message: "Blog not found" });
+        } else {
+          res.send({ success: true, message: "Blog deleted successfully" });
+        }
+      } catch (error) {
+        console.error("Error deleting blog:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to delete blog. Please try again later.",
+        });
+      }
+    });
+
+    // PUT API to change blog status
+    app.put("/blog-status/:id", async (req, res) => {
+      const { id } = req.params;
+      const { status } = req.body; 
+
+      if (!["published", "draft"].includes(status)) {
+        return res
+          .status(400)
+          .send({ success: false, message: "Invalid status" });
+      }
+
+      try {
+        const result = await blogsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status, updatedAt: new Date() } }
+        );
+
+        if (result.matchedCount === 0) {
+          return res
+            .status(404)
+            .send({ success: false, message: "Blog not found" });
+        }
+
+        res.send({
+          success: true,
+          message: `Blog status updated to ${status} successfully`,
+        });
+      } catch (error) {
+        console.error("Error updating blog status:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to update blog status. Please try again later.",
+        });
+      }
+    });
+
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+
     await client.connect();
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
