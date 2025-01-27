@@ -582,6 +582,48 @@ async function run() {
     });
 
     // -------------------------------------------------------------
+    // Endpoint to fetch the total number of donors
+    app.get("/total-donors", async (req, res) => {
+      try {
+        // Fetch the count of all users with the role "donor"
+        const totalDonors = await usersCollection.countDocuments({
+          role: "donor",
+        });
+
+        // Respond with the total donor count
+        res.status(200).json({ success: true, total: totalDonors });
+      } catch (error) {
+        console.error("Error fetching total donors:", error);
+        res
+          .status(500)
+          .json({
+            success: false,
+            message: "Failed to fetch total donors.",
+            error: error.message,
+          });
+      }
+    });
+
+    // Endpoint to fetch the total number of donation requests
+    app.get("/total-donation-requests", async (req, res) => {
+      try {
+        // Fetch the count of all blood donation requests
+        const totalRequests = await donationRequestsCollection.countDocuments();
+
+        // Respond with the total donation requests count
+        res.status(200).json({ success: true, total: totalRequests });
+      } catch (error) {
+        console.error("Error fetching total donation requests:", error);
+        res
+          .status(500)
+          .json({
+            success: false,
+            message: "Failed to fetch total donation requests.",
+            error: error.message,
+          });
+      }
+    });
+
     // -------------------------------------------------------------
 
     await client.connect();
