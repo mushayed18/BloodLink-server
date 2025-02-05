@@ -96,7 +96,7 @@ async function run() {
         console.error("Error fetching donors:", error);
         res.status(500).send({
           success: false,
-          message: "Failed to fetch donors. Please try again later.",
+          message: "Failed to fetch donors. Please try again later!",
         });
       }
     });
