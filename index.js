@@ -254,6 +254,38 @@ async function run() {
       }
     });
 
+    // Get the first three donation requests
+    app.get("/top-donation-requests", async (req, res) => {
+      const { filter } = req.query;
+
+      // Construct query for filter
+      const query = {};
+      if (filter && filter !== "all") {
+        query.donationStatus = filter.toLowerCase();
+      }
+
+      try {
+        // Fetch the first three filtered donation requests
+        const donationRequests = await donationRequestsCollection
+          .find(query)
+          .limit(3) // Only fetch the first three
+          .toArray();
+
+        res.send({
+          success: true,
+          requests: donationRequests,
+        });
+      } catch (error) {
+        console.error("Error retrieving top donation requests:", error);
+        res.status(500).send({
+          success: false,
+          message:
+            "Failed to fetch top donation requests. Please try again later.",
+        });
+      }
+    });
+    // -------------------
+
     // Get all donation requests with 'pending' status
     app.get("/donation-requests-pending", async (req, res) => {
       try {
@@ -594,13 +626,11 @@ async function run() {
         res.status(200).json({ success: true, total: totalDonors });
       } catch (error) {
         console.error("Error fetching total donors:", error);
-        res
-          .status(500)
-          .json({
-            success: false,
-            message: "Failed to fetch total donors.",
-            error: error.message,
-          });
+        res.status(500).json({
+          success: false,
+          message: "Failed to fetch total donors.",
+          error: error.message,
+        });
       }
     });
 
@@ -614,13 +644,11 @@ async function run() {
         res.status(200).json({ success: true, total: totalRequests });
       } catch (error) {
         console.error("Error fetching total donation requests:", error);
-        res
-          .status(500)
-          .json({
-            success: false,
-            message: "Failed to fetch total donation requests.",
-            error: error.message,
-          });
+        res.status(500).json({
+          success: false,
+          message: "Failed to fetch total donation requests.",
+          error: error.message,
+        });
       }
     });
 
